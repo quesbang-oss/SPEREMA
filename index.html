@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>スペレマスロット</title></head>
+<body>
+<div id="app"><div id="cab">
+ <header><h1>スペレマスロット</h1><div class="wal">すぇいしコイン <b id="coins">0</b></div></header>
+ <div id="stats"></div>
+ <div id="reels">
+  <div class="col"><div class="reel"><span></span></div><button class="stop" data-i="0">STOP<small>Z</small></button></div>
+  <div class="col"><div class="reel"><span></span></div><button class="stop" data-i="1">STOP<small>X</small></button></div>
+  <div class="col"><div class="reel"><span></span></div><button class="stop" data-i="2">STOP<small>C</small></button></div>
+ </div>
+ <div id="bets"></div>
+ <div id="ctl"><button id="start">START<small>Space</small></button><button id="auto">AUTO<small>A</small></button><button id="gear">設定</button></div>
+</div></div>
+<div id="telop"></div><canvas id="fx"></canvas>
+<div id="set" class="ov" hidden></div><div id="over" class="ov" hidden></div>
+<script type="module" src="./src/main.js"></script></body></html>
