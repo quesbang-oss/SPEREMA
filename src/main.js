@@ -46,6 +46,8 @@ const yokokuList = GAGS.yokoku.map(g => async () => {
   else if (g.fx === 'ball') fx.emit(30, 'ball', { x: 0, y: .5, dir: 0, spread: .8, speed: 10, g: 0 });
   else if (g.fx === 'coin') { fx.emit(12, 'coin', { x: .1, y: 0, dir: 1.57, spread: .6, speed: 3 }); fx.emit(12, 'coin', { x: .9, y: 0, dir: 1.57, spread: .6, speed: 3 }); }
   else if (g.fx === 'mix') fx.emit(50, 'mix');
+  else if (g.fx === 'rain') fx.emit(60, 'ball', { x: .5, y: 0, dir: 1.57, spread: 3, speed: 3 });
+  if (g.flash) flash(g.flash);
   if (g.shake) shake(500);
   await telop(g.t, g.cls || 'small', 1300);
 });
@@ -69,6 +71,54 @@ const EFFECTS = {
   async premium() {
     bg('rainbow'); snd.voice('premium', '生命の神秘、爆誕！'); snd.sfx('rush'); flash(8); fx.emit(120, 'mix'); shake(1500);
     await telop('👑 生命の神秘 👑', 'shout', 1200); snd.sfx('kakutei'); fx.emit(120, 'mix'); await telop(rnd(GAGS.premium), 'shout', 1300);
+  },
+  // ルーレット：ワードが高速で回り、当たりならゴールイン系、ハズレなら不発系で止まる
+  async roulette(r) {
+    bg('dark'); snd.sfx('rush');
+    for (let i = 0; i < 12; i++) { snd.sfx('chance'); await telop(rnd(GAGS.roulette), 'big', 130 + i * 18); }
+    snd.sfx('don'); shake(500);
+    if (r.tier) { bg('rainbow'); flash(3); await telop(rnd(GAGS.hit), 'shout', 1300); }
+    else { bg('mono'); await telop(rnd(GAGS.miss), 'small', 1100); }
+  },
+  // キャラカットイン
+  async cutin(r) {
+    const c = rnd(GAGS.cutin);
+    bg('pink'); snd.sfx('don'); shake(400);
+    await telop(`${c.e} ${c.n} ${c.e}`, 'big', 1300);
+    await telop(c.q, 'small', 1300);
+    if (r.tier) { bg('rainbow'); snd.sfx('chance'); flash(3); fx.emit(60, 'mix'); await telop(c.w, 'shout', 1500); }
+    else { snd.sfx('lose'); await telop(c.l, 'small', 1300); }
+  },
+  // 10カウントダウン
+  async countdown(r) {
+    bg('blue'); slow = 120;
+    for (let n = 10; n >= 1; n--) { snd.sfx(n <= 3 ? 'don' : 'chance'); await telop(n <= 3 ? `出ちゃう！${n}` : `カウントダウン ${n}`, n <= 3 ? 'shout' : 'big', 380); }
+    if (r.tier) { bg('rainbow'); flash(4); snd.sfx('kakutei'); await telop('0！！ 出ましたァァ！', 'shout', 1500); }
+    else { bg('mono'); snd.sfx('lose'); await telop('0…… 何も出なかった', 'small', 1300); }
+  },
+  // ストーリー予告
+  async story(r) {
+    const s = rnd(GAGS.story); bg('dark');
+    for (const t of s.s) { snd.sfx('chance'); await telop(t, 'big', 1200); }
+    if (r.tier) { bg('rainbow'); snd.sfx('kakutei'); flash(4); fx.emit(60, 'mix'); await telop(s.w, 'shout', 1600); }
+    else { bg('mono'); snd.sfx('lose'); await telop(s.l, 'small', 1300); }
+  },
+  // 精子vs卵子バトル
+  async battle(r) {
+    bg('dark'); snd.sfx('rush'); shake(500);
+    await telop('🐟 vs 🥚 バトル開始！', 'big', 1200);
+    for (const t of rnd(GAGS.battle)) { snd.sfx('don'); fx.emit(20, 'ball', { x: .1, y: .5, dir: 0, spread: .6, speed: 9, g: 0 }); shake(300); await telop(t, 'small', 1000); }
+    if (r.tier) { bg('rainbow'); flash(4); snd.sfx('kakutei'); fx.emit(80, 'mix'); await telop('殻を突破！！ 受精成功！', 'shout', 1600); }
+    else { bg('mono'); snd.sfx('lose'); await telop('バリアに弾かれた…', 'small', 1300); }
+  },
+  // 高倍率（1000倍以上）専用の超豪華演出
+  async mega(r) {
+    bg('rainbow'); snd.sfx('rush'); flash(6); fx.emit(150, 'mix'); shake(1500);
+    await telop('桁が違う！！', 'shout', 1200);
+    snd.sfx('don'); flash(6); fx.emit(200, 'mix');
+    await telop(rnd(GAGS.mega), 'shout', 1500);
+    snd.sfx('kakutei'); snd.voice('premium', '桁が違う！'); shake(2000); fx.emit(250, 'mix');
+    await telop(`×${r.mult.toLocaleString()} 確定！！`, 'shout', 1800);
   },
   // 看板演出：3段階連続演出
   async three(r) {
@@ -133,13 +183,14 @@ async function settle() {
   const r = round.res;
   if (r.tier && !round.paid) { // 払い出しは1回のみ
     round.paid = true;
-    const pay = round.bet * C.payout[r.tier];
+    const pay = round.bet * r.mult;
     st.coins += pay; st.stats.won += pay; st.stats.max = Math.max(st.stats.max, pay);
     snd.sfx('fanfare'); flash(r.tier === 'premium' ? 10 : r.tier === 'normal' ? 2 : 5);
-    if (!['kakutei', 'three', 'premium'].includes(r.effect)) snd.voice('jackpot', '大当たり！');
+    if (!['kakutei', 'three', 'premium', 'mega'].includes(r.effect)) snd.voice('jackpot', '大当たり！');
     for (let i = 0; i < 14; i++) setTimeout(() => snd.sfx('coin'), 300 + i * 150);
     const B = C.burst[r.tier]; fx.emit(B[0], B[1], { y: .55, dir: -1.57, spread: B[2], speed: 11 });
-    render(); if (r.tier !== 'normal') bg('rainbow'); await telop(`${C.labels[r.tier]} +${pay}枚`, 'win', 2300);
+    render(); if (r.tier !== 'normal') bg('rainbow'); if (r.mult >= 1000) { flash(12); for (let i = 1; i <= 4; i++) setTimeout(() => fx.emit(200, 'mix'), i * 500); }
+    await telop(`×${r.mult.toLocaleString()} ${C.labels[r.tier]} +${pay.toLocaleString()}枚`, 'win', r.mult >= 1000 ? 3800 : 2300);
   } else { snd.sfx('lose'); if (Math.random() < .6) snd.voice('lose', rnd(GAGS.miss)); await wait(600); }
   round = null; phase = 'idle'; bg('');
   if (st.coins <= 0) return gameOver();
