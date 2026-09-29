@@ -3,6 +3,7 @@ import { CONFIG as C } from './config.js';
 import { draw } from './systems/lottery.js';
 import { Sound } from './systems/audio.js';
 import { Particles } from './systems/particles.js';
+import { GAGS } from './effects/gags.js';
 import { load, save } from './systems/save.js';
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -38,38 +39,36 @@ const flash = (n = 3) => { const b = document.body; let i = 0; const t = setInte
 const shake = (ms = 600) => { const c = $('#cab'); c.classList.add('shake'); setTimeout(() => c.classList.remove('shake'), ms); };
 
 // ===== 演出データ（追加は関数を足すだけ）=====
-const yokokuList = [
-  async () => { fx.emit(14, 'ball', { x: 0, y: .3 + Math.random() * .4, dir: 0, spread: .2, speed: 9, g: 0 }); await wait(1100); },
-  async () => { $('#reels').classList.add('glow'); await wait(900); $('#reels').classList.remove('glow'); },
-  async () => { bg('silver'); await wait(1000); },
-  async () => { await telop('🐟 登場！', 'small', 1000); },
-  async () => { fx.emit(10, 'coin', { x: .1, y: 0, dir: 1.57, spread: .6, speed: 3 }); fx.emit(10, 'coin', { x: .9, y: 0, dir: 1.57, spread: .6, speed: 3 }); await wait(1100); },
-  async () => { snd.sfx('chance'); fx.gather(30); await telop('ゴールまであと少し！', 'small', 1200); },
-  async () => { snd.sfx('chance'); fx.emit(40, 'ball', { x: 0, y: .5, dir: 0, spread: .8, speed: 10, g: 0 }); await telop('🐟🐟🐟 大量発生！', 'small', 1200); },
-  async () => { snd.sfx('rush'); bg('pink'); await telop('受精チャンス！', 'big', 1300); },
-  async () => { snd.sfx('don'); shake(400); flash(2); await telop('先頭集団、突入！', 'small', 1200); },
-  async () => { bg('rainbow'); snd.sfx('chance'); await telop('虹色ゾーン！', 'small', 1200); }
-];
+const yokokuList = GAGS.yokoku.map(g => async () => {
+  if (g.bg) bg(g.bg);
+  if (g.sfx) snd.sfx(g.sfx);
+  if (g.fx === 'gather') fx.gather(40);
+  else if (g.fx === 'ball') fx.emit(30, 'ball', { x: 0, y: .5, dir: 0, spread: .8, speed: 10, g: 0 });
+  else if (g.fx === 'coin') { fx.emit(12, 'coin', { x: .1, y: 0, dir: 1.57, spread: .6, speed: 3 }); fx.emit(12, 'coin', { x: .9, y: 0, dir: 1.57, spread: .6, speed: 3 }); }
+  else if (g.fx === 'mix') fx.emit(50, 'mix');
+  if (g.shake) shake(500);
+  await telop(g.t, g.cls || 'small', 1300);
+});
 const EFFECTS = {
-  async yokoku() { let i; do { i = Math.floor(Math.random() * yokokuList.length); } while (i === lastY); lastY = i; await yokokuList[i](); if (Math.random() < .5) await yokokuList[(i + 1) % yokokuList.length](); },
+  async yokoku() { let i; do { i = Math.floor(Math.random() * yokokuList.length); } while (i === lastY); lastY = i; await yokokuList[i](); if (Math.random() < .5) await yokokuList[Math.floor(Math.random() * yokokuList.length)](); },
   async reach(r) {
-    bg('rainbow'); slow = 160; snd.sfx('don'); shake(500); await telop('ゴール前リーチ！', 'shout', 1000);
-    for (const n of [3, 2, 1]) { snd.sfx('chance'); await telop('ラストスパート ' + n, 'big', 550); }
-    await telop(r.tier ? 'いける！ゴールイン！' : '惜しい…力尽きた', '', 700);
+    bg('rainbow'); slow = 160; snd.sfx('don'); shake(500); await telop(rnd(GAGS.reach), 'shout', 1100);
+    for (const t of GAGS.count) { snd.sfx('chance'); await telop(t, 'big', 700); }
+    await telop(rnd(r.tier ? GAGS.hit : GAGS.miss), 'small', 900);
   },
   async gekiatsu(r) {
-    bg('rainbow'); fx.gather(60); snd.sfx('rush'); await telop('発射準備OK！', 'big', 1100);
-    snd.sfx('don'); flash(4); shake(1200); snd.voice('gekiatsu', '激アツ！');
-    await telop('激アツ！', 'shout', 1500);
-    if (!r.tier) await telop('…', 'small', 600);
+    bg('rainbow'); fx.gather(60); snd.sfx('rush'); const [pre, main] = rnd(GAGS.geki); await telop(pre, 'big', 1100);
+    snd.sfx('don'); flash(4); shake(1200); snd.voice('gekiatsu', main);
+    await telop(main, 'shout', 1500);
+    if (!r.tier) await telop(rnd(GAGS.miss), 'small', 900);
   },
   async kakutei() {
     bg('rainbow'); snd.sfx('rush'); flash(5); fx.emit(80, 'mix'); await telop('🌈7', 'big', 800); snd.sfx('kakutei'); shake(1000);
-    snd.voice('kakutei', '大当たり確定！'); await telop('大当たり確定！', 'shout', 1500);
+    const k = rnd(GAGS.kakutei); snd.voice('kakutei', k); await telop(k, 'shout', 1500);
   },
   async premium() {
-    bg('rainbow'); snd.voice('premium', 'プレミアム！'); snd.sfx('rush'); flash(8); fx.emit(120, 'mix'); shake(1500);
-    await telop('👑 PREMIUM 👑', 'shout', 1200); snd.sfx('kakutei'); fx.emit(120, 'mix'); await telop('全員ゴールイン！！', 'shout', 1300);
+    bg('rainbow'); snd.voice('premium', '生命の神秘、爆誕！'); snd.sfx('rush'); flash(8); fx.emit(120, 'mix'); shake(1500);
+    await telop('👑 生命の神秘 👑', 'shout', 1200); snd.sfx('kakutei'); fx.emit(120, 'mix'); await telop(rnd(GAGS.premium), 'shout', 1300);
   },
   // 看板演出：3段階連続演出
   async three(r) {
@@ -141,7 +140,7 @@ async function settle() {
     for (let i = 0; i < 14; i++) setTimeout(() => snd.sfx('coin'), 300 + i * 150);
     const B = C.burst[r.tier]; fx.emit(B[0], B[1], { y: .55, dir: -1.57, spread: B[2], speed: 11 });
     render(); if (r.tier !== 'normal') bg('rainbow'); await telop(`${C.labels[r.tier]} +${pay}枚`, 'win', 2300);
-  } else { snd.sfx('lose'); if (Math.random() < .6) snd.voice('lose', 'ハズレ！'); await wait(600); }
+  } else { snd.sfx('lose'); if (Math.random() < .6) snd.voice('lose', rnd(GAGS.miss)); await wait(600); }
   round = null; phase = 'idle'; bg('');
   if (st.coins <= 0) return gameOver();
   persist(); render();
