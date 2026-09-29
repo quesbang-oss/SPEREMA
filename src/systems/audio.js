@@ -16,21 +16,50 @@ export class Sound {
       o.connect(g).connect(c.destination); o.start(t); o.stop(t + d);
     } catch { /* noop */ }
   }
+  // ノイズ（ジャラジャラ・ガチャン系の金属音に使用）
+  noise(d, v = .3, at = 0, f = 3000, bus = 'sfx') {
+    if (!this.ctx) return;
+    try {
+      const c = this.ctx, n = (c.sampleRate * d) | 0, buf = c.createBuffer(1, n, c.sampleRate), a = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) a[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      const src = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+      src.buffer = buf; fl.type = 'bandpass'; fl.frequency.value = f; g.gain.value = Math.max(v * this.s[bus], .0001);
+      src.connect(fl).connect(g).connect(c.destination); src.start(c.currentTime + at);
+    } catch { /* noop */ }
+  }
+  // パチンコ風の効果音
   sfx(n) {
-    const T = (...a) => this.tone(...a);
+    const T = (...a) => this.tone(...a), N = (...a) => this.noise(...a);
     ({
-      bet: () => { T(880, .08); T(1320, .1, 'square', .2, .08); },
-      spin: () => T(120, .6, 'sawtooth', .1, 0, 'sfx', 300),
-      stop: () => T(200, .12, 'square', .3, 0, 'sfx', 60),
-      coin: () => { T(1800, .08, 'triangle'); T(2400, .1, 'triangle', .2, .06); },
-      fanfare: () => [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => T(f, .25, 'square', .2, i * .14)),
-      kakutei: () => [784, 988, 1175, 1568].forEach((f, i) => T(f, .3, 'sawtooth', .2, i * .1)),
-      lose: () => T(220, .4, 'sawtooth', .2, 0, 'sfx', 80)
+      bet: () => { N(.05, .5, 0, 4000); T(1200, .06, 'square', .25); T(1800, .08, 'square', .25, .06); },
+      spin: () => { for (let i = 0; i < 10; i++) N(.03, .35, i * .06, 2500 + i * 80); },
+      stop: () => { N(.08, .7, 0, 1200); T(180, .15, 'square', .4, 0, 'sfx', 50); },
+      coin: () => { for (let i = 0; i < 6; i++) { N(.04, .4, i * .05, 5000 + Math.random() * 2000); T(2200 + Math.random() * 1200, .05, 'triangle', .15, i * .05); } },
+      chance: () => [880, 1108, 1318, 1760, 2217].forEach((f, i) => T(f, .12, 'square', .2, i * .07)),
+      don: () => { N(.3, .9, 0, 200); T(120, .4, 'sawtooth', .5, 0, 'sfx', 30); },
+      rush: () => { T(200, 1.2, 'sawtooth', .2, 0, 'sfx', 2400); for (let i = 0; i < 12; i++) N(.03, .3, i * .1, 3000 + i * 300); },
+      fanfare: () => {
+        [523, 659, 784, 1047, 1319, 1047, 1319, 1568, 2093].forEach((f, i) => { T(f, .22, 'square', .2, i * .11); T(f / 2, .22, 'sawtooth', .12, i * .11); });
+        for (let i = 0; i < 20; i++) N(.04, .35, .3 + i * .07, 4500 + Math.random() * 2500);
+      },
+      kakutei: () => {
+        this.sfx('don');
+        [[784, 988, 1175], [1047, 1319, 1568], [1319, 1568, 2093]].forEach((ch, i) => ch.forEach(f => T(f, .35, 'sawtooth', .16, .15 + i * .18)));
+      },
+      lose: () => [400, 300, 200].forEach((f, i) => T(f, .25, 'triangle', .25, i * .2, 'sfx', f * .8))
     })[n]?.();
   }
+  // ノリのいいBGM（8分音符アルペジオ＋キック＋ハイハット）
   bgm() {
-    const n = [261, 329, 392, 523, 392, 329, 440, 523]; let i = 0;
-    setInterval(() => { if (this.s.bgm > 0) this.tone(n[i++ % 8], .3, 'triangle', .12, 0, 'bgm'); }, 260);
+    const n = [523, 659, 784, 659, 523, 784, 1047, 784]; let i = 0;
+    setInterval(() => {
+      if (this.s.bgm > 0) {
+        this.tone(n[i % 8], .12, 'square', .09, 0, 'bgm');
+        if (i % 2 === 0) this.tone(110, .15, 'sine', .3, 0, 'bgm', 40);
+        if (i % 4 === 2) this.noise(.05, .15, 0, 7000, 'bgm');
+      }
+      i++;
+    }, 150);
   }
   stopVoice() { try { this.cur?.pause(); speechSynthesis.cancel(); } catch { /* noop */ } }
   voice(key, text) {
