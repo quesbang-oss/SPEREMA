@@ -6,7 +6,7 @@ export const CONFIG = {
   payout: { normal: 2, big: 5, super: 10, premium: 20 },
   // 1ゲームあたりの当たり確率。比較対象機種の公表確率は未確認のため、独自の初期値（合計約13%）を使用。
   odds: { normal: 0.08, big: 0.035, super: 0.012, premium: 0.004 },
-  labels: { normal: '当たり', big: '大当たり', super: '超大当たり', premium: 'プレミアム大当たり' },
+  labels: { normal: '受精成功！', big: '着床！大当たり', super: '双子！超大当たり', premium: '大家族！プレミアム' },
   // 当たり時に揃う図柄
   tierSymbols: { normal: ['ball', 'coin', 'heart'], big: ['seven', 'char'], super: ['rainbow'], premium: ['premium'] },
   // 図柄（画像に差し替える場合はここを変更）
