@@ -51,3 +51,13 @@ button.on{background:linear-gradient(#ffe27a,#c58a00);color:#221;border-color:#f
 .box input[type=checkbox]{width:24px;height:24px}
 .box select{font:inherit;padding:8px;border-radius:8px}
 .box input[type=range]{width:100%;height:32px}
+
+/* ===== 派手演出（追加分）===== */
+body[data-bg=rainbow]{animation:rb 1s linear infinite}
+body.flash{filter:invert(1) hue-rotate(180deg) brightness(1.3)}
+body[data-bg=rainbow] #cab{animation:rbb .5s linear infinite}
+body[data-bg=rainbow] .reel{box-shadow:0 0 30px #fff,inset 0 0 14px #0006}
+@keyframes rbb{0%{border-color:#f55;box-shadow:0 0 40px #f55}20%{border-color:#fd5;box-shadow:0 0 40px #fd5}40%{border-color:#5f8;box-shadow:0 0 40px #5f8}60%{border-color:#5df;box-shadow:0 0 40px #5df}80%{border-color:#a5f;box-shadow:0 0 40px #a5f}100%{border-color:#f55;box-shadow:0 0 40px #f55}}
+#telop.shout{background:linear-gradient(90deg,#f55,#fd5,#5f8,#5df,#a5f,#f55);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:2px #fff;animation:pulse .15s infinite alternate,rb 1s linear infinite}
+.shake{animation:sh2 .06s infinite}
+@keyframes sh2{25%{transform:translate(8px,-6px) rotate(.6deg)}75%{transform:translate(-8px,6px) rotate(-.6deg)}}
